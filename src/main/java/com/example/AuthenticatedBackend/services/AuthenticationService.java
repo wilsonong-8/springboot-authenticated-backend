@@ -1,10 +1,15 @@
 package com.example.AuthenticatedBackend.services;
 
 import com.example.AuthenticatedBackend.models.ApplicationUser;
+import com.example.AuthenticatedBackend.models.LoginResponseDTO;
 import com.example.AuthenticatedBackend.models.Role;
 import com.example.AuthenticatedBackend.repository.RoleRepository;
 import com.example.AuthenticatedBackend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +27,10 @@ public class AuthenticationService {
     private RoleRepository roleRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private AuthenticationManager authenticationManager;
+    @Autowired
+    private TokenService tokenService;
 
     public ApplicationUser registerUser(String username, String password) {
 
@@ -32,6 +41,21 @@ public class AuthenticationService {
         authorities.add(userRole);
 
         return userRepository.save(new ApplicationUser(0,username,encodedPassword,authorities));
+    }
+
+    public LoginResponseDTO loginUser(String username, String password) {
+
+        try{
+            Authentication auth = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(username,password)
+            );
+
+            String token = tokenService.generateJwt(auth);
+            return new LoginResponseDTO(userRepository.findByUserName(username).get(),token);
+
+        }catch(AuthenticationException e) {
+            return new LoginResponseDTO(null," ");
+        }
     }
 
 }
